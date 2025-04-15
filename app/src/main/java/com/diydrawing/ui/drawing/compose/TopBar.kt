@@ -1,6 +1,7 @@
 package com.diydrawing.ui.drawing.compose
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -68,6 +69,7 @@ fun DrawingProgressBar(
     val animateProgress = animateFloatAsState(
         targetValue = progress,
         label = "DrawingProgressBar",
+        animationSpec = tween(durationMillis = 300)
     )
     Box(
         modifier = modifier
@@ -79,7 +81,7 @@ fun DrawingProgressBar(
             modifier = Modifier
                 .height(16.dp)
                 .fillMaxWidth(fraction = animateProgress.value.coerceIn(0f, 1f))
-                .background(Color.Green, RoundedCornerShape(4.dp))
+                .background(Color.Green, RoundedCornerShape(8.dp))
         )
     }
 }

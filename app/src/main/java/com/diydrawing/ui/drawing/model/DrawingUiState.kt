@@ -16,11 +16,12 @@ class DrawingUiState {
 
     var initialBitmap: Bitmap? = null
     var initialImageBitmap: MutableState<ImageBitmap?> = mutableStateOf(null)
-    val initialColor = Color.rgb(95, 123, 191)
+    val initialColor = -10058283
+    var coloredPixels: Int? = null
 
     var drawnBitmap: Bitmap? = null
     var drawnImageBitmap: MutableState<ImageBitmap?> = mutableStateOf(null)
-    val drawingColor = Color.rgb(252, 0, 0)
+    val drawingColor = Color.rgb(252, 236, 169)
 
     var canvas: Canvas? = null
     val paint = Paint().apply {

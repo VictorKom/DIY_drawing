@@ -18,20 +18,53 @@ import com.diydrawing.ui.drawing.model.DrawingAction
 import com.diydrawing.ui.drawing.model.DrawingPath
 import com.diydrawing.ui.drawing.model.DrawingUiState
 import com.diydrawing.utils.IdGenerator
+import com.diydrawing.utils.throttleLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.retryWhen
+import kotlinx.coroutines.launch
 
 class DrawingViewModel : ViewModel() {
 
     val drawingUiState = DrawingUiState()
     private val idGenerator = IdGenerator()
+    private val bitmapAnalyzer = BitmapAnalyzer()
 
     init {
+        observePathForDrawing()
+        observePathForProgressCalculation()
+    }
+
+    private fun observePathForDrawing() {
         snapshotFlow {
             drawingUiState.drawingPathList.toList()
         }.onEach {
             drawPathList()
         }.launchIn(viewModelScope)
+    }
+
+    private fun observePathForProgressCalculation() {
+        snapshotFlow {
+            drawingUiState.drawingPathList.toList()
+        }
+            .throttleLatest(300L)
+            .onEach {
+                val initialBitmap = drawingUiState.initialBitmap ?: return@onEach
+                val drawnBitmap = drawingUiState.drawnBitmap ?: return@onEach
+                val coloredPixels = drawingUiState.coloredPixels ?: return@onEach
+                val progress = bitmapAnalyzer.calculateDrawingDifference(
+                    initialBitmap,
+                    drawingUiState.initialColor,
+                    coloredPixels,
+                    drawnBitmap,
+                    drawingUiState.drawingColor
+                )
+                drawingUiState.progress.floatValue = progress
+            }
+            .retryWhen { cause, _ ->
+                cause is IllegalStateException
+            }
+            .launchIn(viewModelScope)
     }
 
     fun onDrawingAction(drawingAction: DrawingAction) {
@@ -49,6 +82,13 @@ class DrawingViewModel : ViewModel() {
             (resources.getDrawable(R.drawable.circus_image, null) as BitmapDrawable).bitmap
         this.initialBitmap = initialBitmap
         initialImageBitmap.value = initialBitmap.asImageBitmap()
+        viewModelScope.launch {
+            val initialColoredPixels = bitmapAnalyzer.calculateColoredPixels(
+                initialBitmap,
+                initialColor
+            )
+            drawingUiState.coloredPixels = initialColoredPixels
+        }
 
         val bitmap = Bitmap.createBitmap(
             initialBitmap.width,
@@ -95,26 +135,4 @@ class DrawingViewModel : ViewModel() {
             canvas?.drawPath(it.path.asAndroidPath(), paint)
         }
     }
-
-//    fun calculateDrawingDifference(initial: Bitmap, drawn: Bitmap): Float {
-//        if (initial.width != drawn.width || initial.height != drawn.height) {
-//            throw IllegalArgumentException("Bitmaps must be the same size")
-//        }
-//
-//        val width = initial.width
-//        val height = initial.height
-//        val totalPixels = width * height
-//        var alignPixels = 0
-//
-//        for (y in 0 until height) {
-//            for (x in 0 until width) {
-//                if (initial.getPixel(x, y) != bitmap2.getPixel(x, y)) {
-//                    alignPixels++
-//                }
-//            }
-//        }
-//
-//        // Return percentage of difference (0.0 = identical, 1.0 = completely different)
-//        return differentPixels.toFloat() / totalPixels
-//    }
 }
